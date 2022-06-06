@@ -6,6 +6,7 @@
   "scripts": {
     "test": "jest"
   },
+  "bin": "./bin/cli.js",
   "author": "Oleg Veskelen",
   "license": "MIT",
   "devDependencies": {
