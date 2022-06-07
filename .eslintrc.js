@@ -1,6 +1,11 @@
 const { rules: bestPracticesAirbnbRules } = require('eslint-config-airbnb-base/rules/best-practices');
 const { rules: tsAirbnbRules } = require('eslint-config-airbnb-typescript/lib/shared');
 
+/* TODO: find out source of this rule */
+const reactRules = {
+  'react/jsx-filename-extension': 'off',
+};
+
 /* [start] customized-rules */
 const customizedCoreRules = {
   'max-len': 'off',
@@ -136,9 +141,7 @@ module.exports = {
     es2021: true,
     jest: true,
   },
-  extends: [
-    'prettier',
-  ],
+  extends: ['prettier'],
   overrides: [
     {
       files: ['./.eslintrc.js'],
@@ -158,6 +161,7 @@ module.exports = {
         ...customizedCoreRules,
         ...customizedImportRules,
         ...customizedTsRules,
+        ...reactRules,
       },
     },
   ],
