@@ -32,9 +32,14 @@ export async function create({ entry, output, rewrite = false, prefix = '', post
       console.log(`Processing ${componentName}.`);
 
       const svgData = getMinifiedSVG(item, kebabCase(componentName));
-      const colorsType = getSvgColorType(svgData);
 
-      createComponent(svgData, componentName, output);
+      if (svgData.error || svgData.modernError) {
+        throw Error(svgData.error);
+      }
+
+      const colorsType = getSvgColorType(svgData.data);
+
+      createComponent(svgData.data, componentName, output);
     }
   });
 
