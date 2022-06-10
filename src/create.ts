@@ -39,7 +39,7 @@ export async function create({ entry, output, rewrite = false, prefix = '', post
 
       const colorsType = getSvgColorType(svgData.data);
 
-      createComponent(svgData.data, componentName, output);
+      createComponent(svgData, componentName, output);
     }
   });
 
