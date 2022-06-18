@@ -1,4 +1,4 @@
-import { startCase, sortBy, camelCase, upperCase } from 'lodash';
+import { startCase, sortBy, camelCase, upperCase, template } from 'lodash';
 import glob from 'glob';
 import fs from 'fs';
 import { optimize, OptimizedSvg } from 'svgo';
@@ -13,6 +13,7 @@ const REGEXPS = { // TODO: move it to constants
   SVG: /(?<svg>[\s\S]*?)>/,
   ARRAY: /\[.*\]/,
   ATTTRS: /(?<attr>(\S*['-])([a-zA-Z'-]+))="(?<data>[\S]*)"/,
+  TEMPLATE_VARIABLE: /\$\{(?<name>[^}]+)}/, // TODO: remove
 };
 
 const ATTRIBUTE_REGEXP_GROUP_NAMES = {
@@ -63,6 +64,15 @@ function getDefaultValue(value: string, name: string = '') {
     return `const DEFAULT_${name}_VALUE = ${REGEXPS.ARRAY.test(value) ? value : `'${value}'`};`;
   }
   return '';
+}
+
+/**
+ * Returns modified value of fill or stroke attributes for template.
+ *
+ * @param {string} value
+ */
+ function getTemplateValue(value: string) {
+  return `${REGEXPS.ARRAY.test(value) ? value : `'${value}'`};`;
 }
 
 /**
@@ -335,9 +345,6 @@ export default ${componentName};
  * @param {string} componentName
  */
 function getComponentSource(svgObj: OptimizedSvg, componentName: string) {
-  // Almost all icons are square
-  const isSquareIcon = true;
-
   // Gather arrays of all fill and stroke attributes
   const fill = mergeAttributes(getSvgAttributes(svgObj.data, toGlobal(REGEXPS.FILL)));
   const stroke = mergeAttributes(getSvgAttributes(svgObj.data, toGlobal(REGEXPS.STROKE)));
@@ -348,10 +355,10 @@ function getComponentSource(svgObj: OptimizedSvg, componentName: string) {
   svgWithProps = svgWithProps.replace(REGEXPS.WIDTH, '');
 
   // Add class and {...props} at the end of <svg > tag
-  svgWithProps = svgWithProps.replace(
-    '><',
-    " style={{ width, height }} {...rest} className={`wb-icon ${props.className || ''}`}><",
-  );
+  // svgWithProps = svgWithProps.replace(
+  //   '><',
+  //   " style={{ width, height }} {...rest} className={`wb-icon ${props.className || ''}`}><",
+  // );
 
   // Replacing all fill and stroke attributes values to props
   svgWithProps = replaceSvgAttributes(svgWithProps, fill, creteReplacement(fill.length > 1, 'fill'));
@@ -361,18 +368,47 @@ function getComponentSource(svgObj: OptimizedSvg, componentName: string) {
     return res!.replaceAll(attr, camelCase(attr));
   });
 
+  const fillToProps = toPropsValue(getAttributesValues(fill, REGEXPS.FILL, ATTRIBUTE_REGEXP_GROUP_NAMES.fill));
+  const strokeToProps = toPropsValue(getAttributesValues(stroke, REGEXPS.STROKE, ATTRIBUTE_REGEXP_GROUP_NAMES.stroke));
+
   const iconProps = {
     svgWithProps,
     width: svgObj.info.width,
     height: svgObj.info.height,
     pathToIcon: svgObj.path || '',
     componentName,
-    fill: toPropsValue(getAttributesValues(fill, REGEXPS.FILL, ATTRIBUTE_REGEXP_GROUP_NAMES.fill)),
-    stroke: toPropsValue(getAttributesValues(stroke, REGEXPS.STROKE, ATTRIBUTE_REGEXP_GROUP_NAMES.stroke)),
-    isSquareIcon,
+    fill: getTemplateValue(fillToProps),
+    stroke: getTemplateValue(strokeToProps),
+    isSquareIcon: svgObj.info.width === svgObj.info.height,
+    type: getExtendedInterface({ fill: fillToProps, stroke: strokeToProps })
   };
 
-  return getIconTemplate(iconProps);
+  return iconProps;
+  // return getIconTemplate(iconProps);
+}
+
+/**
+ * @param {string} tmplt Template of icon component.
+ * @param {any} srcData Icon file params.
+ */
+function getIconFileContent(tmplt: string, srcData: any) {
+  const svgTagOpen = '<svg';
+  const svgTagClose = '/>';
+
+  let { svgWithProps } = srcData;
+
+  const compiled = template(tmplt);
+  const res = compiled(srcData);
+
+  const templateToArr = res.split(' ');
+  const svgTagOpenIndex = templateToArr.indexOf(svgTagOpen);
+  const svgTagCloseIndex = templateToArr.indexOf(svgTagClose);
+  const extraSvgAttributes = templateToArr.slice(svgTagOpenIndex + 1, svgTagCloseIndex).join(' ');
+  // TODO: rewrite it later
+  svgWithProps = svgWithProps.replace('><', `${extraSvgAttributes}><`);
+
+
+  return '';
 }
 
 /**
@@ -381,12 +417,14 @@ function getComponentSource(svgObj: OptimizedSvg, componentName: string) {
  * @param {string} svg Minifyed svg content.
  * @param {string} name Components name.
  * @param {string} output Output folder.
+ * @param {string} tmplt Template of icon component.
  */
-export function createComponent(svg: OptimizedSvg, name: string, output: string) {
-  const componentSrc = getComponentSource(svg, name);
+export function createComponent(svg: OptimizedSvg, name: string, output: string, tmplt: string) {
+  const componentSrcData = getComponentSource(svg, name);
 
+  const iconFileConntent = getIconFileContent(tmplt, componentSrcData);
   // TODO: file extention shhould be optional
   const pathToComponent = output + name + '.tsx';
 
-  fs.writeFileSync(pathToComponent, componentSrc);
+  fs.writeFileSync(pathToComponent, iconFileConntent);
 }

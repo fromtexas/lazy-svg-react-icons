@@ -1,4 +1,5 @@
 import glob from 'glob';
+import fs from 'fs';
 import { kebabCase } from 'lodash';
 
 import { getComponentName, hasDupe, getMinifiedSVG, getSvgColorType, createComponent } from './utils';
@@ -9,9 +10,12 @@ type TCreateFNParams = {
   rewrite?: boolean;
   prefix?: string;
   postfix?: string;
+  iconTemplatePath?: string;
 };
 
-export async function create({ entry, output, rewrite = false, prefix = '', postfix = '' }: TCreateFNParams) {
+const DEFAULT_ICON_TEMPLATE_PATH = './icon-template.js'
+
+export async function create({ entry, output, rewrite = false, prefix = '', postfix = '', iconTemplatePath = DEFAULT_ICON_TEMPLATE_PATH }: TCreateFNParams) {
   if (!entry) {
     throw Error('Entry should not be empty!');
   }
@@ -39,7 +43,9 @@ export async function create({ entry, output, rewrite = false, prefix = '', post
 
       const colorsType = getSvgColorType(svgData.data);
 
-      createComponent(svgData, componentName, output);
+      const template = fs.readFileSync(iconTemplatePath, 'utf-8');
+
+      createComponent(svgData, componentName, output, template);
     }
   });
 
