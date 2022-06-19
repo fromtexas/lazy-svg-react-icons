@@ -1,25 +1,9 @@
-import { startCase, sortBy, camelCase, upperCase, template } from 'lodash';
+import { startCase, sortBy, camelCase, template } from 'lodash';
 import glob from 'glob';
 import fs from 'fs';
 import { optimize, OptimizedSvg } from 'svgo';
 
-const REGEXPS = { // TODO: move it to constants
-  WIDTH: /width="(?<width>\S*)"/,
-  HEIGHT: /height="(?<height>\S*)"/,
-  FILL: /fill="(?<fill>\S*)"/,
-  STROKE: /stroke="(?<stroke>\S*)"/,
-  VIEWBOX: /viewBox="(?<viewBox>[\d\s]*)"/,
-  STYLE: /style="(?<style>[\S]*)"/,
-  SVG: /(?<svg>[\s\S]*?)>/,
-  ARRAY: /\[.*\]/,
-  ATTTRS: /(?<attr>(\S*['-])([a-zA-Z'-]+))="(?<data>[\S]*)"/,
-  TEMPLATE_VARIABLE: /\$\{(?<name>[^}]+)}/, // TODO: remove
-};
-
-const ATTRIBUTE_REGEXP_GROUP_NAMES = {
-  fill: 'fill',
-  stroke: 'stroke',
-};
+import { REGEXPS, ATTRIBUTE_REGEXP_GROUP_NAMES } from './constants';
 
 /**
  * Makes regex global.
@@ -54,58 +38,12 @@ function mergeAttributes(attributes: string[] = [], exclude: RegExp = /fill="(?<
 }
 
 /**
- * Creates constant with assigned value.
- *
- * @param {string} value Constant value.
- * @param {string} name Attribute name.
- */
-function getDefaultValue(value: string, name: string = '') {
-  if (value) {
-    return `const DEFAULT_${name}_VALUE = ${REGEXPS.ARRAY.test(value) ? value : `'${value}'`};`;
-  }
-  return '';
-}
-
-/**
  * Returns modified value of fill or stroke attributes for template.
  *
  * @param {string} value
  */
  function getTemplateValue(value: string) {
   return `${REGEXPS.ARRAY.test(value) ? value : `'${value}'`};`;
-}
-
-/**
- *
- * @param {string} interfaceName
- * @param {string} extedtion
- */
- function extendInterface(interfaceName: string = '', extedtion: string = '') {
-  if (!extedtion) {
-    return interfaceName;
-  }
-
-  return `Modify<${interfaceName}, ${extedtion}>`;
-}
-
-type TProps = Record<string, string>;
-
-/**
- * Returns props with default values.
- *
- * @param {TProps} props
- */
-function getProps(props: TProps) {
-  if (isEmptyValues(props)) {
-    return '';
-  }
-
-  return Object.keys(props).reduce((res, key) => {
-    if (props[key]) {
-      return res + ` ${key} = DEFAULT_${upperCase(key)}_VALUE,`;
-    }
-    return res;
-  }, '');
 }
 
 /**
@@ -285,60 +223,6 @@ function creteReplacement(isArr: boolean = false, attribute: string = '') {
 }
 
 /**
- * @param {string} svgWithProps Content.
- * @param {string} width
- * @param {string} pathToIcon Original svg file destination.
- * @param {string} componentName
- * @param {string} fill
- * @param {string} stroke
- * @param {boolean} isSquareIcon
- */
-type TTemplateParams = {
-  svgWithProps: string,
-  width: string,
-  pathToIcon: string,
-  componentName: string,
-  fill: string,
-  stroke: string,
-  isSquareIcon: boolean,
-}
-
-/**
- * Returns component file content.
- *
- * @param {TTemplateParams} props All icon component props
- */
-// TODO: fix template imports
-function getIconTemplate({ svgWithProps, width, pathToIcon, componentName, fill, stroke, isSquareIcon }: TTemplateParams) {
-  return `/* svg_file:${pathToIcon} */
-import { IconPropsInterface, Modify } from './types';
-import './styles.css';
-
-${getDefaultValue(fill, 'FILL')}
-${getDefaultValue(stroke, 'STROKE')}
-
-/**
- *
- * @param {IconPropsInterface} props
- */
-export function ${componentName}(props:\n${extendInterface(
-    'IconPropsInterface',
-    getExtendedInterface({ fill, stroke }),
-  )}) {
-  const { width = ${width}, height = ${isSquareIcon ? 'width' : "'auto'"},\n${getProps({
-    fill,
-    stroke,
-  })} ...rest } = props;
-  return (
-    ${svgWithProps}
-  );
-}
-
-export default ${componentName};
-`;
-}
-
-/**
  * Generates svg-component content.
  *
  * @param {OptimizedSvg} svgObj
@@ -353,12 +237,6 @@ function getComponentSource(svgObj: OptimizedSvg, componentName: string) {
   // Removing width and height
   let svgWithProps = svgObj.data.replace(REGEXPS.HEIGHT, '');
   svgWithProps = svgWithProps.replace(REGEXPS.WIDTH, '');
-
-  // Add class and {...props} at the end of <svg > tag
-  // svgWithProps = svgWithProps.replace(
-  //   '><',
-  //   " style={{ width, height }} {...rest} className={`wb-icon ${props.className || ''}`}><",
-  // );
 
   // Replacing all fill and stroke attributes values to props
   svgWithProps = replaceSvgAttributes(svgWithProps, fill, creteReplacement(fill.length > 1, 'fill'));
@@ -384,7 +262,6 @@ function getComponentSource(svgObj: OptimizedSvg, componentName: string) {
   };
 
   return iconProps;
-  // return getIconTemplate(iconProps);
 }
 
 /**
@@ -398,17 +275,21 @@ function getIconFileContent(tmplt: string, srcData: any) {
   let { svgWithProps } = srcData;
 
   const compiled = template(tmplt);
-  const res = compiled(srcData);
+  const replaced = compiled(srcData);
 
-  const templateToArr = res.split(' ');
-  const svgTagOpenIndex = templateToArr.indexOf(svgTagOpen);
-  const svgTagCloseIndex = templateToArr.indexOf(svgTagClose);
-  const extraSvgAttributes = templateToArr.slice(svgTagOpenIndex + 1, svgTagCloseIndex).join(' ');
-  // TODO: rewrite it later
-  svgWithProps = svgWithProps.replace('><', `${extraSvgAttributes}><`);
+  // TODO: Use named group after regexp fix
+  const svgTag = REGEXPS.SVG.exec(replaced)?.[0];
+  if (!svgTag) {
+    throw Error('Can not find svg tag!');
+  }
+  // TODO: Use regexp to get attributes
+  const svgAttributes = svgTag.replace(svgTagOpen, '').replace(svgTagClose, '');
 
+  // TODO: Check for duplications of svg attributes
+  svgWithProps = svgWithProps.replace('><', `${svgAttributes}><`);
+  replaced.replace(REGEXPS.SVG, svgWithProps);
 
-  return '';
+  return replaced;
 }
 
 /**
@@ -423,7 +304,7 @@ export function createComponent(svg: OptimizedSvg, name: string, output: string,
   const componentSrcData = getComponentSource(svg, name);
 
   const iconFileConntent = getIconFileContent(tmplt, componentSrcData);
-  // TODO: file extention shhould be optional
+  // TODO: file extention should be optional
   const pathToComponent = output + name + '.tsx';
 
   fs.writeFileSync(pathToComponent, iconFileConntent);
