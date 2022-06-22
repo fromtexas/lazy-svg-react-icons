@@ -4,6 +4,7 @@ import fs from 'fs';
 import { optimize, OptimizedSvg } from 'svgo';
 
 import { REGEXPS, ATTRIBUTE_REGEXP_GROUP_NAMES } from './constants';
+import { TComponentNameArgs, TCreateComponentArgs } from './types';
 
 /**
  * Makes regex global.
@@ -49,7 +50,7 @@ function mergeAttributes(attributes: string[] = [], exclude: RegExp = /fill="(?<
 /**
  * Checks if object has no values.
  *
- * @param {Record<string, any>} obj
+ * @param {Record<string, any>} obj // TODO: type
  */
 function isEmptyValues(obj: Record<string, any> = {}) {
   return Object.values(obj).filter(Boolean).length === 0;
@@ -91,16 +92,6 @@ function getExtendedInterface(props: Record<string, string>) {
   return values[0];
 }
 
-/**
- * @param {string} name File name.
- * @param {prefix} [prefix] Prefix for component name.
- * @param {postfix} [postfix] Postfix for component name.
- */
-type TComponentNameArgs = {
-  name: string;
-  prefix?: string;
-  postfix?: string;
-};
 /**
  * Returns component name.
  *
@@ -210,7 +201,6 @@ function creteReplacement(isArr: boolean = false, attribute: string = '') {
 }
 
 /**
- *
  * @param {string} svg
  * @param {string[]} attributes Массив атриибутов
  * @param {(svg?: string, attributesItem?: string, attributeIndex?: number) => string} replacer Функция меняющая значение атрибута
@@ -268,7 +258,7 @@ function getComponentSource(svgObj: OptimizedSvg, componentName: string) {
  * @param {string} tmplt Template of icon component.
  * @param {any} srcData Icon file params.
  */
-function getIconFileContent(tmplt: string, srcData: any) {
+function getIconFileContent(tmplt: string, srcData: any) { // TODO: type
   const svgTagOpen = '<svg';
   const svgTagClose = '/>';
 
@@ -294,18 +284,19 @@ function getIconFileContent(tmplt: string, srcData: any) {
 
 /**
  * Creates icon component and put it in output folder.
- *
- * @param {string} svg Minifyed svg content.
- * @param {string} name Components name.
- * @param {string} output Output folder.
- * @param {string} tmplt Template of icon component.
  */
-export function createComponent(svg: OptimizedSvg, name: string, output: string, tmplt: string) {
+export function createComponent({
+  svg,
+  name,
+  output,
+  tmplt,
+  extention,
+}: TCreateComponentArgs) {
   const componentSrcData = getComponentSource(svg, name);
 
   const iconFileConntent = getIconFileContent(tmplt, componentSrcData);
-  // TODO: file extention should be optional
-  const pathToComponent = output + name + '.tsx';
+
+  const pathToComponent = output + name + extention;
 
   fs.writeFileSync(pathToComponent, iconFileConntent);
 }

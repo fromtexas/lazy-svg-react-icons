@@ -3,19 +3,21 @@ import fs from 'fs';
 import { kebabCase } from 'lodash';
 
 import { getComponentName, hasDupe, getMinifiedSVG, getSvgColorType, createComponent } from './utils';
-
-type TCreateFNParams = {
-  entry: string;
-  output: string;
-  rewrite?: boolean;
-  prefix?: string;
-  postfix?: string;
-  iconTemplatePath?: string;
-};
+import { TCreateFNParams } from './types';
 
 const DEFAULT_ICON_TEMPLATE_PATH = './icon-template.js'
 
-export async function create({ entry, output, rewrite = false, prefix = '', postfix = '', iconTemplatePath = DEFAULT_ICON_TEMPLATE_PATH }: TCreateFNParams) {
+// TODO: add hooks
+
+export async function create({
+  entry,
+  output,
+  prefix = '',
+  rewrite = false,
+  postfix = '',
+  extention = '.tsx',
+  iconTemplatePath = DEFAULT_ICON_TEMPLATE_PATH,
+}: TCreateFNParams) {
   if (!entry) {
     throw Error('Entry should not be empty!');
   }
@@ -30,7 +32,6 @@ export async function create({ entry, output, rewrite = false, prefix = '', post
     const iconName = item.replace(/^.*[/\\]/, '');
 
     const componentName = prefix + getComponentName({ name: iconName, prefix, postfix });
-    // TODO: check extension later
 
     if (rewrite || !hasDupe(componentName, output)) {
       console.log(`Processing ${componentName}.`);
@@ -45,7 +46,7 @@ export async function create({ entry, output, rewrite = false, prefix = '', post
 
       const template = fs.readFileSync(iconTemplatePath, 'utf-8');
 
-      createComponent(svgData, componentName, output, template);
+      createComponent({svg: svgData, name: componentName, output, tmplt: template, extention});
     }
   });
 
