@@ -5,9 +5,10 @@ export const REGEXPS = {
   STROKE: /stroke="(?<stroke>\S*)"/,
   VIEWBOX: /viewBox="(?<viewBox>[\d\s]*)"/,
   STYLE: /style="(?<style>[\S]*)"/,
-  SVG: /(?<svg>[\s\S]*?)>/, // TODO: fix bug in group 2
+  SVG: /(?<svg>[\s\S]*?>)/,
   ARRAY: /\[.*\]/,
   ATTTRS: /(?<attr>(\S*['-])([a-zA-Z'-]+))="(?<data>[\S]*)"/,
+  PARAMS: /(?<name>\b\w+\b)\s*=\s*(?<value>"[^"]*"|'[^']*'|[^"'<>\s]+)/,
 };
 
 export const ATTRIBUTE_REGEXP_GROUP_NAMES = {

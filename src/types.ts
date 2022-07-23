@@ -44,3 +44,15 @@ export type TCreateComponentArgs = {
   tmplt: string;
   extention: string;
 };
+
+export type TIconProps = {
+  svgWithProps: string;
+  width: string;
+  height: string;
+  pathToIcon: string;
+  componentName: string;
+  fill: string;
+  stroke: string;
+  isSquareIcon: boolean;
+  type: string;
+};

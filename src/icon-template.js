@@ -1,10 +1,11 @@
 `
 /* svg_file:${pathToIcon} */
+import type { SVGProps } from 'react';
 
 const DEFAULT_FILL_VALUE = ${fill};
 const DEFAULT_STROKE_VALUE = ${stroke};
 
-type TProps = ${type};
+type TProps = SVGProps<SVGSVGElement> & ${type};
 
 /**
  *
@@ -20,7 +21,7 @@ export function ${componentName}(props: TProps) {
    } = props;
 
    return (
-    <svg className={"wb-icon" + " " + props.className || ''} style={{ width, height }} {...rest} />
+    <svg className={"wb-icon" + " " + props.className || ""} style={{ width, height }} {...rest} />
   );
 }
 

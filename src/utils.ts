@@ -4,7 +4,7 @@ import fs from 'fs';
 import { optimize, OptimizedSvg } from 'svgo';
 
 import { REGEXPS, ATTRIBUTE_REGEXP_GROUP_NAMES } from './constants';
-import { TComponentNameArgs, TCreateComponentArgs } from './types';
+import { TComponentNameArgs, TCreateComponentArgs, TIconProps } from './types';
 
 /**
  * Makes regex global.
@@ -256,9 +256,9 @@ function getComponentSource(svgObj: OptimizedSvg, componentName: string) {
 
 /**
  * @param {string} tmplt Template of icon component.
- * @param {any} srcData Icon file params.
+ * @param {TIconProps} srcData Icon file params.
  */
-function getIconFileContent(tmplt: string, srcData: any) { // TODO: type
+function getIconFileContent(tmplt: string, srcData: TIconProps) {
   const svgTagOpen = '<svg';
   const svgTagClose = '/>';
 
@@ -267,8 +267,7 @@ function getIconFileContent(tmplt: string, srcData: any) { // TODO: type
   const compiled = template(tmplt);
   const replaced = compiled(srcData);
 
-  // TODO: Use named group after regexp fix
-  const svgTag = REGEXPS.SVG.exec(replaced)?.[0];
+  const svgTag = REGEXPS.SVG.exec(replaced)?.groups?.svg;
   if (!svgTag) {
     throw Error('Can not find svg tag!');
   }

@@ -8,6 +8,8 @@ import { TCreateFNParams } from './types';
 const DEFAULT_ICON_TEMPLATE_PATH = './icon-template.js'
 
 // TODO: add hooks
+// TODO: linter
+// TODO: Prettier
 
 export async function create({
   entry,
